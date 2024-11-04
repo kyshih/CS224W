@@ -23,8 +23,7 @@ wget https://www.encodeproject.org/files/ENCFF724APB/@@download/ENCFF724APB.tar.
 ### Transcript levels (total RNAseq)
 wget https://www.encodeproject.org/files/ENCFF103FSL/@@download/ENCFF103FSL.tsv
 ### 3D genome architecture (In Situ HiC data)
-wget https://www.encodeproject.org/files/ENCFF913RLG/@@download/ENCFF913RLG.bigWig \n
-wget https://www.encodeproject.org/files/ENCFF050EKS/@@download/ENCFF050EKS.bedpe.gz \n
-wget https://www.encodeproject.org/files/ENCFF018XKF/@@download/ENCFF018XKF.bedpe.gz \n
-wget https://www.encodeproject.org/files/ENCFF306VTV/@@download/ENCFF306VTV.hic \n
-
+wget https://www.encodeproject.org/files/ENCFF913RLG/@@download/ENCFF913RLG.bigWig; \
+wget https://www.encodeproject.org/files/ENCFF050EKS/@@download/ENCFF050EKS.bedpe.gz; \
+wget https://www.encodeproject.org/files/ENCFF018XKF/@@download/ENCFF018XKF.bedpe.gz; \
+wget https://www.encodeproject.org/files/ENCFF306VTV/@@download/ENCFF306VTV.hic
