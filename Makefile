@@ -11,6 +11,8 @@ ATAC_BW = $(DATA_DIR)/ENCFF262URW.bigWig
 REFERENCE_GENOME = $(DATA_DIR)/hg38.fa.gz
 CHROM_SIZES = $(DATA_DIR)/hg38.chrom.sizes
 EMBEDDINGS = $(DATA_DIR)/embeddings.npz
+EXPRESSION = $(DATA_DIR)/expression.tsv
+GENE_ANNOTATION = $(DATA_DIR)/gencode.v38.chr_patch_hapl_scaff.basic.annotation.gtf.gz
 
 # Create data directory
 $(DATA_DIR):
@@ -50,12 +52,22 @@ $(CHROM_SIZES): | $(DATA_DIR)
 $(EMBEDDINGS): | $(DATA_DIR)
 	wget -O $@ https://mitra.stanford.edu/kundaje/kobbad/CS224W/embeddings.npz
 
+$(EXPRESSION): | $(DATA_DIR)
+	wget -O $@ https://www.encodeproject.org/files/ENCFF336WOX/@@download/ENCFF336WOX.tsv
+
+$(GENE_ANNOTATION): | $(DATA_DIR)
+	wget -O $@ https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_38/gencode.v38.chr_patch_hapl_scaff.basic.annotation.gtf.gz
+
 # gunzip hg38.fa.gz
 $(DATA_DIR)/hg38.fa: $(REFERENCE_GENOME)
 	gunzip -c $< > $@
 
+# gunzip gencode.v38.annotation.gtf.g
+$(DATA_DIR)/gencode.v38.chr_patch_hapl_scaff.basic.annotation.gtf: $(GENE_ANNOTATION)
+	gunzip -c $< > $@
+
 # Main target to download all files
-all: $(TAR_FILE) $(TSV_FILE) $(BIGWIG_FILE) $(BEDPE_FILE_1) $(BEDPE_FILE_2) $(PEAKS_BED) $(ATAC_BW) $(REFERENCE_GENOME) $(CHROM_SIZES) $(EMBEDDINGS)
+all: $(TAR_FILE) $(TSV_FILE) $(BIGWIG_FILE) $(BEDPE_FILE_1) $(BEDPE_FILE_2) $(PEAKS_BED) $(ATAC_BW) $(REFERENCE_GENOME) $(CHROM_SIZES) $(EMBEDDINGS) $(EXPRESSION) $(GENE_ANNOTATION) 
 
 # Clean downloaded files
 clean:
