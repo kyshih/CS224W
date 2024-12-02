@@ -92,3 +92,31 @@ def build_enhancer_graph(df, W):
     embedding_index = torch.tensor(embedding_index, dtype=torch.long)
 
     return edge_index, embedding_index
+
+def add_virtual_node(graph):
+    """
+    Add a virtual node to an undirected graph, connecting it to all other nodes.
+
+    Args:
+        graph (torch_geometric.data.Data): Input graph with `x` (node features) and `edge_index`.
+
+    Returns:
+        torch_geometric.data.Data: Graph with added virtual node and edges.
+    """
+    num_nodes = graph.x.size(0)  # Number of original nodes
+    num_features = graph.x.size(1)  # Feature dimension per node
+
+    # Add a virtual node feature (initialized with zeros or learnable parameters)
+    virtual_node_feature = torch.zeros((1, num_features), dtype=graph.x.dtype)
+    graph.x = torch.cat([graph.x, virtual_node_feature], dim=0)
+
+    # Create edges connecting the virtual node (num_nodes) to all other nodes
+    virtual_edges = torch.tensor(
+        [[num_nodes] * num_nodes,  # Virtual node -> all other nodes
+         list(range(num_nodes))],  # All other nodes -> Virtual node
+        dtype=graph.edge_index.dtype,
+    )
+    
+    graph.edge_index = torch.cat([graph.edge_index, virtual_edges], dim=1)
+
+    return graph
