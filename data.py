@@ -1,7 +1,10 @@
 import pandas as pd
 import torch
+import numpy as np
+from torch_geometric.data import Data, Dataset
 
-def sample_tpm_rows(dataframe, percentage_zero_tpm):
+
+def sample_tpm_rows(dataframe, percentage_zero_tpm, percentile = 0):
     """
     Randomly samples rows from the dataframe with all rows having TPM > 0
     and X% of rows with TPM = 0.
@@ -14,8 +17,9 @@ def sample_tpm_rows(dataframe, percentage_zero_tpm):
     - pd.DataFrame: A dataframe containing the sampled rows.
     """
     # Split the dataframe into two groups
-    non_zero_tpm = dataframe[dataframe['TPM'] > 0]
-    zero_tpm = dataframe[dataframe['TPM'] == 0]
+    low_threshold = np.percentile(dataframe['TPM'], percentile)
+    non_zero_tpm = dataframe[dataframe['TPM'] > low_threshold]
+    zero_tpm = dataframe[dataframe['TPM'] <= 0]
     
     # Calculate the number of rows to sample from zero TPM group
     num_zero_tpm_to_sample = int(len(zero_tpm) * (percentage_zero_tpm / 100))
@@ -86,6 +90,10 @@ def build_enhancer_graph(df, W):
 
     edge_index = torch.tensor(edge_index, dtype=torch.long).T
 
+
+    if edge_index.shape[0] == 0:
+        raise ValueError("No edges found")
+
     edge_index = remove_duplicate_edges(edge_index)
 
     # convert embedding index to tensor long
@@ -120,3 +128,102 @@ def add_virtual_node(graph):
     graph.edge_index = torch.cat([graph.edge_index, virtual_edges], dim=1)
 
     return graph
+
+class EnhancerGraphDataset(Dataset):
+    def __init__(self, dataframes,peaks, embedding, gene_window = 500_000, enhancer_window = 50_000, transform=None):
+        """
+        Args:
+            dataframes (list): List of DataFrames, one for each graph.
+            labels (list): List of labels for each graph.
+            W (int): Distance threshold for connecting nodes.
+        """
+        self.dataframes = dataframes
+        self.peaks = peaks
+        self.peaks = self.peaks.drop_duplicates(subset=peaks.columns[[0, 1, 2]])
+
+        self.embedding = torch.tensor(embedding)
+
+        self.gene_window = gene_window
+        self.enhancer_window = enhancer_window
+
+        self.transform = transform
+
+    def len(self):
+        return len(self.dataframes)
+
+    
+    def indices(self):
+        return list(range(len(self.dataframes)))
+
+    def get(self, idx):
+        # Build the graph
+        _, chrom, start, end, label = self.dataframes.iloc[idx]
+
+        label = np.log1p(label)
+
+        adj_peaks = self.peaks[(self.peaks[1] > start - self.gene_window) & (self.peaks[2] < end + self.gene_window) & (self.peaks[0] == chrom)]
+        
+        try:
+            edge_index, embedding_index = build_enhancer_graph(adj_peaks, self.enhancer_window)
+        except:
+            return self.get(idx + 1)
+
+        node_features = self.embedding[embedding_index]
+        
+        # Create a graph data object
+        graph = Data(x=node_features, edge_index=edge_index, y=torch.tensor([label], dtype=torch.float))
+
+        # Add a virtual node
+        #graph = add_virtual_node(graph)
+
+        return graph
+
+
+class EnhancerGraphDatasetClassify(Dataset):
+    def __init__(self, dataframes,peaks, embedding, gene_window = 500_000, enhancer_window = 50_000, transform=None):
+        """
+        Args:
+            dataframes (list): List of DataFrames, one for each graph.
+            labels (list): List of labels for each graph.
+            W (int): Distance threshold for connecting nodes.
+        """
+        self.dataframes = dataframes
+        self.peaks = peaks
+        self.peaks = self.peaks.drop_duplicates(subset=peaks.columns[[0, 1, 2]])
+
+        self.embedding = torch.tensor(embedding)
+
+        self.gene_window = gene_window
+        self.enhancer_window = enhancer_window
+
+        self.transform = transform
+
+    def len(self):
+        return len(self.dataframes)
+
+    
+    def indices(self):
+        return list(range(len(self.dataframes)))
+
+    def get(self, idx):
+        # Build the graph
+        _, chrom, start, end, label = self.dataframes.iloc[idx]
+
+        label = 1 if label > 0 else 0
+
+        adj_peaks = self.peaks[(self.peaks[1] > start - self.gene_window) & (self.peaks[2] < end + self.gene_window) & (self.peaks[0] == chrom)]
+        
+        try:
+            edge_index, embedding_index = build_enhancer_graph(adj_peaks, self.enhancer_window)
+        except:
+            return self.get(idx + 1)
+
+        node_features = self.embedding[embedding_index]
+        
+        # Create a graph data object
+        graph = Data(x=node_features, edge_index=edge_index, y=torch.tensor([label], dtype=torch.float))
+
+        # Add a virtual node
+        #graph = add_virtual_node(graph)
+
+        return graph
